@@ -41,19 +41,10 @@ module ActiveRecord
         sql += "AND conrelid = (SELECT oid FROM pg_catalog.pg_class WHERE relname='#{table}')"
         
         query(sql,name).collect do |row| 
-          if row[1] =~ /FOREIGN KEY \((.+)\) REFERENCES (.+)\((.+)\) ON UPDATE (\w+) ON DELETE (\w+)/
-            ForeignKeyConstraintDefinition.new(row[0],
-                                                Regexp.last_match(1),
-                                                Regexp.last_match(2),
-                                                Regexp.last_match(3),
-                                                symbolize_foreign_key_constraint_action(Regexp.last_match(4)),
-                                                symbolize_foreign_key_constraint_action(Regexp.last_match(5)))
-          elsif row[1] =~ /FOREIGN KEY \((.+)\) REFERENCES (.+)\((.+)\)/
-            ForeignKeyConstraintDefinition.new(row[0],
-						Regexp.last_match(1),
-						Regexp.last_match(2),
-						Regexp.last_match(3),
-						nil, nil)
+          if row[1] =~ /FOREIGN KEY \((.+)\) REFERENCES (.+)\((.+)\)(?: ON UPDATE (\w+))?(?: ON DELETE (\w+))?/
+            ForeignKeyConstraintDefinition.new(row[0], $1, $2, $3,
+                                               ($4 ? symbolize_foreign_key_constraint_action($4) : nil),
+                                               ($5 ? symbolize_foreign_key_constraint_action($5) : nil))
           end
         end
       end
