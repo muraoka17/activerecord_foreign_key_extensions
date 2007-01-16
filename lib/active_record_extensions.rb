@@ -150,7 +150,9 @@ module ActiveRecord
       end
       
       def add_foreign_key_constraint(table_name, foreign_key, reference_table, reference_column, options = {})
-	constraint_name = options[:name] || "#{table_name}_ibfk_#{foreign_key}"
+        # sqlite and fks don't mix well, http://www.sqlite.org/cvstrac/wiki?p=ForeignKeyTriggers
+        return if adapter_name =~ /^sqlite/i
+        constraint_name = options[:name] || "#{table_name}_ibfk_#{foreign_key}"
 
         # oracle chokes on constraints longer than 30 chars
 	if adapter_name =~ /^(oci|oracle)$/i
