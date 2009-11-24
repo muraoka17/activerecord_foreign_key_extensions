@@ -9,7 +9,7 @@ module ActiveRecord
       def tables(stream)
         old_tables(stream)
         @connection.tables.sort.each do |tbl|
-          next if tbl == "schema_info"
+          next if tbl == "schema_migrations"
           foreign_key_constraints(tbl, stream)
         end
       end
@@ -52,12 +52,6 @@ module ActiveRecord
       def remove_foreign_key_constraint(table_name, constraint_name)
         execute "ALTER TABLE #{table_name} DROP CONSTRAINT #{constraint_name}"
       end
-      
-      alias old_default_value default_value
-      def default_value(value)
-        return ":now" if value =~ /^now\(\)|^\('now'::text\)::(date|timestamp)/i
-        return old_default_value(value) 
-      end
     end
     
     class OracleAdapter < AbstractAdapter
@@ -90,6 +84,19 @@ module ActiveRecord
         execute "ALTER TABLE #{table_name} DROP FOREIGN KEY #{constraint}"
       end      
     end 
+    
+    class PostgreSQLColumn < Column
+      private
+        class << self
+          if respond_to?(:extract_value_from_default)
+            alias old_extract_value_from_default extract_value_from_default
+            def extract_value_from_default(default)
+              return ":now" if default =~ /^now\(\)|^\('now'::text\)::(date|timestamp)/i
+              return self.old_extract_value_from_default(default)
+            end
+          end
+        end
+    end
     
     class MysqlAdapter < AbstractAdapter
       def foreign_key_constraints(table, name = nil)
